@@ -17,6 +17,7 @@ import sys
 import os
 import arcpy
 import shutil
+import datetime
 from celery_app import app
 
 reload(sys)
@@ -24,14 +25,17 @@ sys.setdefaultencoding('utf8')
 
 
 @app.task
-def clipfromsde(mapnumlist,MEDIA):
-    taskpath=MEDIA
+def clipfromsde(mapnumlist,MEDIA,taskname,userid):
+    taskdirname=u"user_{0}/{1}/{2}".format(userid, datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f"), taskname)
+
     SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-    pgsde = u"pgarcgis.sde"
+    rgsde = u"rgs20181204150827.sde"
+    mapindexsde=u"mapindex20181204150827.sde"
 
-    arcpy.env.workspace = os.path.join(SCRIPT_DIR, pgsde)
 
-    tempath = os.path.join(SCRIPT_DIR, u"tasktemlate")
+
+    tempath = os.path.join(os.path.dirname(SCRIPT_DIR), u"tasktemplate")
+    taskpath=os.path.join(MEDIA,taskdirname)
     shutil.copytree(tempath, taskpath)
     jtbpath = os.path.join(taskpath, u"Source", u"接图表.gdb", u"DLG_50000", u"GBmaprange")
 
@@ -41,25 +45,23 @@ def clipfromsde(mapnumlist,MEDIA):
         SQList.append(SQL)
     SQLstr = u" or ".join(SQList)
 
-    for ds in arcpy.ListDatasets(feature_type='feature') + ['']:
-        if ds == u"dbgg.sde.mapinde":
-            for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
-                fcpath = os.path.join(arcpy.env.workspace, ds, fc)
-                arcpy.Select_analysis(fcpath, jtbpath, SQLstr)
+    arcpy.env.workspace = os.path.join(SCRIPT_DIR, rgsde)
 
     for ds in arcpy.ListDatasets(feature_type='feature') + ['']:
-        if ds == u"dbgg.sde.DLG_K050":
+        if ds == mapindexsde+u"DLG_50000":
+            for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
+                if fc == mapindexsde+u"GBmaprange":
+                    fcpath = os.path.join(arcpy.env.workspace, ds, fc)
+                    arcpy.Select_analysis(fcpath, jtbpath, SQLstr)
+
+    arcpy.env.workspace = os.path.join(SCRIPT_DIR, rgsde)
+    for ds in arcpy.ListDatasets(feature_type='feature') + ['']:
+        if ds == rgsde+u"DLG_K050":
             for fc in arcpy.ListFeatureClasses(feature_dataset=ds):
                 fcpath = os.path.join(arcpy.env.workspace, ds, fc)
-                taskgbpath = os.path.join(taskpath, u"Source", u"GBRGS.gdb", u"DLG_K050", fc.split(".")[2][0:9])
+                taskgbpath = os.path.join(taskpath, u"Source", u"RGS.gdb", u"DLG_K050", fc.split(".")[2])
                 arcpy.Clip_analysis(fcpath, jtbpath, taskgbpath)
 
-    for ds in arcpy.ListDatasets(feature_type='feature') + ['']:
-        if ds == u"dbggg.sde.DLG_K050_jb":
-            for fc in arcpy.ListFeatureClasses(feature_type=ds):
-                fcpath = os.path.join(arcpy.env.workspace, ds, fc)
-                taskjbpath = os.path.join(taskpath, u"Source", u"JBRGS.gdb", u"DLG_K050", fc.split(".")[2][0:9])
-                arcpy.Clip_analysis(fcpath, jtbpath, taskjbpath)
 
     return True
 

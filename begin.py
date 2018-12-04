@@ -24,8 +24,13 @@ sys.setdefaultencoding('utf8')
 
 
 def begin():
-    clipfromsde.clipfromsde.delay(6, 9)
-    clipfromsde.clipfromsde.delay(6, 9)
+    MEDIA=u"F:/data"
+    taskname=u"task2018"
+    user_id=u"1"
+    clipfromsde.clipfromsde(u"I49E019021,I49E019022,I49E019023", MEDIA,taskname,user_id)
+
+    #clipfromsde.clipfromsde.delay(u"I49E019021,I49E019022,I49E019023", MEDIA,taskname)
+    # clipfromsde.clipfromsde.delay(6, 9)
     return True
 
 
